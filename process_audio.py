@@ -25,6 +25,7 @@ def get_audio_data(audio_path, audio_metadata):
     audio_metadata["length_seconds_remainder"] = int((audio_metadata["length_time"] - audio_metadata["length_mins"]) * 60)
     song_file.close()
     print_audio_metadata(audio_metadata)
+    return audio_metadata
 
 def decode_24bit_to_int32(raw_bytes):
     # This is a placeholder for now
@@ -32,7 +33,7 @@ def decode_24bit_to_int32(raw_bytes):
     raise NotImplementedError("24 bit audio not supported yet")
 
 def convert_bytes_to_numpy_array(raw_bytes, sample_width):
-    # convert raw WAV framse to a NumPy array based on given sample width
+
     match sample_width:
         case 1:
             samples = np.frombuffer(raw_bytes, dtype=np.uint8)
@@ -43,21 +44,16 @@ def convert_bytes_to_numpy_array(raw_bytes, sample_width):
             samples = decode_24bit_to_int32(raw_bytes)
         case 4:
             samples = np.frombuffer(raw_bytes, dtype=np.float32)
-        case _: # default
+        case _:
             raise ValueError("Unsupported bit depth")
 
-    # print(f"Samples: {samples}")
     return samples
 
 def read_wav_in_chunks(audio_path, chunk_size=1024, audio_metadata=None):
     if audio_metadata is None:
         raise Exception("Unknown error, audio metadata is missing")
-    if type(audio_metadata) is not dict:
-        raise Exception("Unknown error, audio metadata is not a dictionary")
-    print(f"metadata type: {type(audio_metadata)}")
+
     with wave.open(audio_path, "rb") as song_file:
-        # i = 0
-        # i for debugging purposes
         while True:
             raw_bytes = song_file.readframes(chunk_size)
             if not raw_bytes:
@@ -67,13 +63,21 @@ def read_wav_in_chunks(audio_path, chunk_size=1024, audio_metadata=None):
             if audio_metadata["num_channels"] > 1:
                 samples = samples.reshape(-1, audio_metadata["num_channels"])
 
-            # print(f"Chunk {i}: {samples}")
-            # i += 1
             yield samples
 
 def get_audio_chunks(audio_path, chunk_size=1024, audio_metadata=None):
     chunks = []
-    for i, chunk in enumerate(read_wav_in_chunks(audio_path, chunk_size, audio_metadata)):
-        print(f"Got chunk {i}, shape: {chunk.shape}")
+    for chunk in read_wav_in_chunks(audio_path, chunk_size, audio_metadata):
         chunks.append(chunk)
+    print(f"Got {len(chunks)} chunks")
     return chunks
+
+def array_to_fft(chunks):
+    for i, chunk in enumerate(chunks):
+        chunk = chunk[:, 0] if chunk.ndim > 1 else chunk
+        fft_vals = np.fft.fft(chunk)
+        fft_mag = np.abs(fft_vals)
+        N = len(chunk)
+        half = N // 2
+        fft_mag = fft_mag[:half]
+        yield fft_mag
