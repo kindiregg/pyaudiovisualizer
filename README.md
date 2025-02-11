@@ -31,5 +31,5 @@ I included a [bootleg remix I made](https://soundcloud.com/kindridmusic/eastghos
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/yourusername/pyaudiovisualize.git
+   git clone https://github.com/yourusername/pyaudiovisualizer.git
    cd pyaudiovisualize
